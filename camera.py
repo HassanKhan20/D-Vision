@@ -13,6 +13,9 @@ class Camera:
             return False
         self._capture.set(cv2.CAP_PROP_FRAME_WIDTH, self.frame_width)
         return True
+        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # No buffering → no lag
+        self.cap.set(cv2.CAP_PROP_FPS, 60)
+
 
     def read(self) -> Tuple[bool, Optional[Any]]:
         success, frame = self._capture.read()

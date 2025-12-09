@@ -1,26 +1,42 @@
 import json
-import numpy as np
 from pathlib import Path
-import face_recognition
+from datetime import datetime, timedelta
+import numpy as np
+from scipy.spatial.distance import cosine
 
 
 class Person:
-    def __init__(self, name: str, embedding: np.ndarray):
+    def __init__(self, name, embedding, relation="", last_seen=None, seen_count=0):
         self.name = name
-        self.embedding = embedding.tolist()
+        self.embedding = embedding.tolist() if isinstance(embedding, np.ndarray) else embedding
+        self.relation = relation
+        self.last_seen = last_seen
+        self.seen_count = seen_count
 
     def to_dict(self):
-        return {"name": self.name, "embedding": self.embedding}
+        return {
+            "name": self.name,
+            "embedding": self.embedding,
+            "relation": self.relation,
+            "last_seen": self.last_seen,
+            "seen_count": self.seen_count,
+        }
 
     @staticmethod
     def from_dict(data):
-        return Person(data["name"], np.array(data["embedding"]))
+        return Person(
+            data["name"],
+            np.array(data["embedding"], dtype="float32"),
+            data.get("relation", ""),
+            data.get("last_seen", None),
+            data.get("seen_count", 0),
+        )
 
 
 class FaceDatabase:
     def __init__(self, path: Path):
         self.path = path
-        self.people = []  # List[Person]
+        self.people = []
 
     def load(self):
         if self.path.exists():
@@ -32,23 +48,36 @@ class FaceDatabase:
         with open(self.path, "w") as f:
             json.dump([p.to_dict() for p in self.people], f, indent=2)
 
-    def add_embedding(self, name: str, embedding):
-        """Add a new face embedding to DB."""
-        self.people.append(Person(name, embedding))
+    def add_embedding(self, name, embedding, relation=""):
+        emb = np.array(embedding, dtype="float32")
+        self.people.append(Person(name, emb, relation))
 
-    def lookup(self, embedding, threshold=0.6):
-        """Find best match using face distance."""
+    def lookup(self, encoding, tolerance=0.91):
         if not self.people:
             return None, 0.0
 
-        known_encodings = [np.array(p.embedding) for p in self.people]
-        distances = face_recognition.face_distance(known_encodings, embedding)
+        best_person = None
+        best_conf = 0.0
+        encoding = np.array(encoding, dtype="float32")
 
-        best_idx = np.argmin(distances)
-        best_dist = distances[best_idx]
+        for person in self.people:
+            stored = np.array(person.embedding, dtype="float32")
+            conf = max(0.0, 1.0 - cosine(encoding, stored))
 
-        if best_dist < threshold:
-            confidence = 1.0 - best_dist
-            return self.people[best_idx], round(confidence, 2)
+            if conf > best_conf:
+                best_conf = round(conf, 2)
+                best_person = person
 
-        return None, 0.0
+        if best_person and best_conf >= tolerance:
+            now = datetime.now()
+            if not best_person.last_seen:
+                best_person.seen_count += 1
+            else:
+                last = datetime.fromisoformat(best_person.last_seen)
+                if now - last > timedelta(seconds=60):
+                    best_person.seen_count += 1
+
+            best_person.last_seen = now.isoformat(timespec="minutes")
+            return best_person, best_conf
+
+        return None, best_conf
