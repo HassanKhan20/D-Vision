@@ -21,8 +21,8 @@ import cv2
 import numpy as np
 
 from .camera import Camera
-from .config import DEFAULT_DB_PATH
-from .database import FaceDatabase, Person
+from .config import DEFAULT_DB_PATH, RECOGNITION_SKIP_FRAMES
+from .database import FaceDatabase
 from .recognition import FaceRecognizer
 from .ui import Overlay
 
@@ -141,34 +141,54 @@ def recognition_loop(
     """
     Main recognition loop - continuously detect and identify faces.
     
-    Displays live video feed with overlays showing recognized
-    people's names, relation, and seen count.
+    Uses skip-frame processing to reduce CPU load: only runs face
+    detection/encoding every Nth frame (configured by RECOGNITION_SKIP_FRAMES).
+    Cached results are displayed on skipped frames for smooth video.
     
     Args:
         camera: Camera instance for video capture.
         recognizer: FaceRecognizer for detection and encoding.
         db: FaceDatabase for matching faces.
     """
-    logger.info("Recognition loop started. Press 'q' to quit.")
+    logger.info(
+        "Recognition loop started (skip-frame: %d). Press 'q' to quit.",
+        RECOGNITION_SKIP_FRAMES
+    )
     overlay = Overlay()
+    
+    # Skip-frame processing state
+    frame_counter = 0
+    cached_boxes: list = []
+    cached_matches: list = []
 
     while True:
         ok, frame = camera.read()
         if not ok or frame is None:
             continue
 
-        boxes, encodings = recognizer.encode_faces(frame)
-        display = frame.copy()
-
-        if encodings:
-            # Match each detected face against the database
-            matches = []
-            for enc in encodings:
-                person, conf = db.lookup(enc)
-                matches.append((person, conf))
-
-            overlay.draw_overlays(display, boxes, matches)
+        frame_counter += 1
+        display = frame  # Avoid copy on skipped frames
+        
+        # Only run expensive face detection/encoding every Nth frame
+        if frame_counter % RECOGNITION_SKIP_FRAMES == 0:
+            boxes, encodings = recognizer.encode_faces(frame)
+            
+            if encodings:
+                # Match each detected face against the database
+                matches = []
+                for enc in encodings:
+                    person, conf = db.lookup(enc)
+                    matches.append((person, conf))
+                cached_boxes, cached_matches = boxes, matches
+            else:
+                cached_boxes, cached_matches = [], []
+        
+        # Draw overlays using cached or fresh results
+        if cached_boxes:
+            display = frame.copy()  # Only copy when drawing
+            overlay.draw_overlays(display, cached_boxes, cached_matches)
         else:
+            display = frame.copy()
             overlay.draw_instructions(display, "Scanning...")
 
         cv2.imshow("D-Vision", display)

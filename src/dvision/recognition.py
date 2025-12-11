@@ -11,8 +11,6 @@ import face_recognition
 import numpy as np
 from typing import List, Tuple
 
-from .database import Person
-
 
 # Type aliases for clarity
 FaceLocation = Tuple[int, int, int, int]  # (top, right, bottom, left)
@@ -71,22 +69,4 @@ class FaceRecognizer:
             encodings = face_recognition.face_encodings(rgb, face_locations)
 
         return face_locations, encodings
-
-    def match_faces(
-        self, encodings: List[FaceEncoding], db: "FaceDatabase"
-    ) -> List[Tuple[Person, float]]:
-        """
-        Match a list of face encodings against the database.
-        
-        Args:
-            encodings: List of face encodings to match.
-            db: FaceDatabase instance to search.
-            
-        Returns:
-            List of (person, confidence) tuples.
-        """
-        matches = []
-        for encoding in encodings:
-            matches.append(db.lookup(encoding))
-        return matches
 

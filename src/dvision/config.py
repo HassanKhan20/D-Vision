@@ -14,6 +14,12 @@ RECOGNITION_TOLERANCE: float = 0.91  # Minimum confidence for positive match
 SEEN_COOLDOWN_SECONDS: int = 60      # Cooldown before incrementing seen_count
 
 # =============================================================================
+# Performance Tuning
+# =============================================================================
+RECOGNITION_SKIP_FRAMES: int = 2     # Process every Nth frame (1=all, 2=half, 3=third)
+                                     # Higher values = better FPS, slower detection
+
+# =============================================================================
 # Camera Settings
 # =============================================================================
 DEFAULT_CAMERA_INDEX: int = 0

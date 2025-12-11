@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 from typing import Optional, List, Tuple, Any
 
 import numpy as np
-from scipy.spatial.distance import cosine
+from scipy.spatial.distance import cdist
 
 from .config import RECOGNITION_TOLERANCE, SEEN_COOLDOWN_SECONDS
 
@@ -84,11 +84,13 @@ class FaceDatabase:
     def __init__(self, path: Path) -> None:
         self.path = path
         self.people: List[Person] = []
+        self._embedding_matrix: Optional[np.ndarray] = None  # Pre-computed for fast matching
 
     def load(self) -> None:
         """Load database from disk. Creates empty list if file doesn't exist."""
         if not self.path.exists():
             self.people = []
+            self._rebuild_embedding_matrix()
             return
             
         try:
@@ -98,6 +100,17 @@ class FaceDatabase:
         except (json.JSONDecodeError, KeyError) as e:
             logger.error("Failed to load database: %s", e)
             self.people = []
+        
+        self._rebuild_embedding_matrix()
+
+    def _rebuild_embedding_matrix(self) -> None:
+        """Pre-compute embedding matrix for vectorized matching."""
+        if self.people:
+            self._embedding_matrix = np.array(
+                [p.embedding for p in self.people], dtype="float32"
+            )
+        else:
+            self._embedding_matrix = None
 
     def save(self) -> None:
         """Persist database to disk."""
@@ -110,12 +123,16 @@ class FaceDatabase:
         """Add a new person to the database."""
         emb = np.array(embedding, dtype="float32")
         self.people.append(Person(name, emb, relation))
+        self._rebuild_embedding_matrix()  # Keep matrix in sync
 
     def lookup(
         self, encoding: np.ndarray, tolerance: float = RECOGNITION_TOLERANCE
     ) -> Tuple[Optional[Person], float]:
         """
         Find the best matching person for a face encoding.
+        
+        Uses vectorized cosine similarity (cdist) for O(1) batch matching
+        instead of O(n) loop. Significant speedup for large databases.
         
         Args:
             encoding: 128-dimensional face encoding to match.
@@ -124,22 +141,19 @@ class FaceDatabase:
         Returns:
             Tuple of (matched Person or None, confidence score).
         """
-        if not self.people:
+        if self._embedding_matrix is None or len(self.people) == 0:
             return None, 0.0
 
-        best_person: Optional[Person] = None
-        best_conf: float = 0.0
-        encoding = np.array(encoding, dtype="float32")
+        # Vectorized cosine similarity: 1 - cdist gives similarity
+        encoding = np.array(encoding, dtype="float32").reshape(1, -1)
+        distances = cdist(encoding, self._embedding_matrix, metric="cosine")[0]
+        similarities = np.maximum(0.0, 1.0 - distances)
+        
+        best_idx = int(np.argmax(similarities))
+        best_conf = round(float(similarities[best_idx]), 2)
+        best_person = self.people[best_idx]
 
-        for person in self.people:
-            stored = np.array(person.embedding, dtype="float32")
-            conf = max(0.0, 1.0 - cosine(encoding, stored))
-
-            if conf > best_conf:
-                best_conf = round(conf, 2)
-                best_person = person
-
-        if best_person is not None and best_conf >= tolerance:
+        if best_conf >= tolerance:
             now = datetime.now()
             
             # Update seen count with cooldown to prevent spam
