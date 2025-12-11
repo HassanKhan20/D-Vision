@@ -1,5 +1,31 @@
+# Python
 venv/
 .venv/
 __pycache__/
 *.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Database (regenerated per-user)
 face_db.json
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+
+# Binary dependencies (download separately)
+*.whl
+
+# Environment
+.env
+*.env.local
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

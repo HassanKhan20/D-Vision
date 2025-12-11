@@ -11,7 +11,7 @@ import face_recognition
 import numpy as np
 from typing import List, Tuple
 
-from database import Person
+from .database import Person
 
 
 # Type aliases for clarity

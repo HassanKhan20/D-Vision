@@ -6,9 +6,9 @@ dementia assistance. Runs on desktop for development, with
 planned deployment to Raspberry Pi Zero 2 W.
 
 Usage:
-    python app.py                          # Run face recognition
-    python app.py --add-face --name "Name" # Add a new face
-    python app.py --camera-index 1         # Use different camera
+    python -m dvision                       # Run face recognition
+    python -m dvision --add-face --name "Name" # Add a new face
+    python -m dvision --camera-index 1      # Use different camera
 """
 
 import argparse
@@ -20,11 +20,11 @@ from typing import Optional
 import cv2
 import numpy as np
 
-from camera import Camera
-from config import DEFAULT_DB_PATH
-from database import FaceDatabase, Person
-from recognition import FaceRecognizer
-from ui import Overlay
+from .camera import Camera
+from .config import DEFAULT_DB_PATH
+from .database import FaceDatabase, Person
+from .recognition import FaceRecognizer
+from .ui import Overlay
 
 # Configure logging
 logging.basicConfig(
@@ -218,4 +218,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

@@ -9,7 +9,7 @@ import cv2
 import numpy as np
 from typing import Optional, Tuple
 
-from config import (
+from .config import (
     DEFAULT_CAMERA_INDEX,
     DEFAULT_FRAME_WIDTH,
     CAMERA_FPS,

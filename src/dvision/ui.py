@@ -9,14 +9,14 @@ import cv2
 import numpy as np
 from typing import List, Tuple, Optional
 
-from config import (
+from .config import (
     RECOGNITION_TOLERANCE,
     COLOR_GREEN,
     COLOR_WHITE,
     COLOR_YELLOW,
     COLOR_LIGHT_PURPLE,
 )
-from database import Person
+from .database import Person
 
 
 # Type aliases

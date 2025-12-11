@@ -10,7 +10,7 @@ Powered by OpenCV · MediaPipe · Face Recognition (dlib)
 
 ## 🎯 Mission
 
-Bring personal AI assistance into the real world — starting with **smart glasses that recognize who you’re looking at** and instantly show helpful context.
+Bring personal AI assistance into the real world — starting with **smart glasses that recognize who you're looking at** and instantly show helpful context.
 
 This repo contains the **desktop MVP** so the experience can be tested **before custom hardware arrives**.
 
@@ -31,19 +31,18 @@ This repo contains the **desktop MVP** so the experience can be tested **before 
 
 ## 🧱 Architecture
 
-
-
+```
 Camera -> RGB Frame -> Detection -> Encoding -> Matching -> HUD Overlay
-
+```
 
 | Module | Purpose |
 |--------|---------|
-| `app.py` | Main runtime + CLI |
-| `camera.py` | Webcam capture abstraction (swap for Pi later) |
-| `recognition.py` | Face embeddings + matching engine |
-| `ui.py` | Bounding boxes + name labels in video feed |
-| `database.py` | Local JSON embedding storage |
-| `requirements.txt` | Python dependencies |
+| `src/dvision/app.py` | Main runtime + CLI |
+| `src/dvision/camera.py` | Webcam capture abstraction (swap for Pi later) |
+| `src/dvision/recognition.py` | Face embeddings + matching engine |
+| `src/dvision/ui.py` | Bounding boxes + name labels in video feed |
+| `src/dvision/database.py` | Local JSON embedding storage |
+| `src/dvision/config.py` | Centralized configuration constants |
 
 ---
 
@@ -59,36 +58,97 @@ python -m venv .venv
 source .venv/bin/activate   # Windows: .\.venv\Scripts\activate
 
 pip install --upgrade pip
-pip install -r requirements.txt
+pip install -e .
+```
 
-🚀 Usage
-🎥 Run Face Recognition
-python app.py
+---
 
+## 🚀 Usage
 
-Press Q anytime to exit.
+### 🎥 Run Face Recognition
 
-➕ Add a Face to the Database
-python app.py --add_face --name "Hassan"
+```sh
+python -m dvision
+```
 
+Press **Q** anytime to exit.
+
+### ➕ Add a Face to the Database
+
+```sh
+python -m dvision --add-face --name "Hassan"
+```
 
 A face is saved as soon as it detects one.
 
-📷 Choose Webcam Device
-python app.py --camera-index 1
+### 📷 Choose Webcam Device
 
-🗂️ Face Database Format
+```sh
+python -m dvision --camera-index 1
+```
 
-The file updates automatically:
+---
 
-{
-  "people": [
-    {
-      "name": "Hassan",
-      "embedding": [0.12, -0.03, ...]
-    }
-  ]
-}
+## 🗂️ Face Database Format
 
+The file `face_db.json` updates automatically:
+
+```json
+[
+  {
+    "name": "Hassan",
+    "embedding": [0.12, -0.03, ...],
+    "relation": "Self",
+    "last_seen": "2024-01-15T10:30",
+    "seen_count": 5
+  }
+]
+```
 
 Runs offline — your identity stays on-device 🔒
+
+---
+
+## 🔧 Development
+
+### Install Dev Dependencies
+
+```sh
+pip install -e ".[dev]"
+```
+
+### Run Linting
+
+```sh
+ruff check src/
+```
+
+### Type Checking
+
+```sh
+mypy src/dvision/
+```
+
+---
+
+## 🍓 Raspberry Pi Zero 2 W
+
+For deployment on Pi, adjust settings in `src/dvision/config.py`:
+
+```python
+# Lower resolution for performance
+DEFAULT_FRAME_WIDTH = 320
+CAMERA_FPS = 30
+```
+
+Install Pi-specific dependencies:
+
+```sh
+pip install -e ".[pi]"
+```
+
+---
+
+## 📜 License
+
+MIT

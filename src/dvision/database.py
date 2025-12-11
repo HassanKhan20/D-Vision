@@ -14,7 +14,7 @@ from typing import Optional, List, Tuple, Any
 import numpy as np
 from scipy.spatial.distance import cosine
 
-from config import RECOGNITION_TOLERANCE, SEEN_COOLDOWN_SECONDS
+from .config import RECOGNITION_TOLERANCE, SEEN_COOLDOWN_SECONDS
 
 logger = logging.getLogger("D-Vision")
 
